@@ -1,0 +1,641 @@
+openapi: 3.0.3
+info:
+  title: GameHub API
+  version: 1.0.0
+  description: REST API для управления профилями игроков, входами, достижениями и турнирной таблицей.
+servers:
+  - url: http://localhost:8080
+    description: Локальный сервер
+tags:
+  - name: Players
+    description: Профили игроков, входы и достижения
+  - name: Leaderboard
+    description: Турнирная таблица игроков
+paths:
+  /api/players/batch:
+    post:
+      tags: [Players]
+      operationId: batchPlayers
+      summary: Создать несколько профилей игроков через Redis Pipeline
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchPlayersRequest'
+      responses:
+        '200':
+          description: Пакетная операция успешно выполнена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id}:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    post:
+      tags: [Players]
+      operationId: upsertPlayer
+      summary: Создать или обновить профиль игрока
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertPlayerRequest'
+      responses:
+        '200':
+          description: Сохранённый профиль игрока
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+    get:
+      tags: [Players]
+      operationId: getPlayer
+      summary: Получить профиль игрока с использованием cache-aside
+      responses:
+        '200':
+          description: Профиль игрока
+          headers:
+            X-Cache:
+              description: HIT, если профиль получен из кеша, иначе MISS
+              schema:
+                type: string
+                enum: [HIT, MISS]
+                example: HIT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id}/level:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    patch:
+      tags: [Players]
+      operationId: updatePlayerLevel
+      summary: Изменить уровень игрока и опубликовать уведомление
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LevelUpdateRequest'
+      responses:
+        '200':
+          description: Обновлённый профиль игрока
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id}/login:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    post:
+      tags: [Players]
+      operationId: recordPlayerLogin
+      summary: Атомарно увеличить суточный счётчик входов
+      responses:
+        '200':
+          description: Текущее значение счётчика и оставшееся время жизни
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id}/achievements:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+    post:
+      tags: [Players]
+      operationId: addPlayerAchievement
+      summary: Добавить игроку уникальное достижение
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AchievementRequest'
+      responses:
+        '200':
+          description: Результат добавления достижения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementResponse'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id}/achievements/{name}:
+    parameters:
+      - $ref: '#/components/parameters/PlayerId'
+      - name: name
+        in: path
+        description: Название достижения
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          example: FIRST_WIN
+    get:
+      tags: [Players]
+      operationId: hasPlayerAchievement
+      summary: Проверить наличие достижения у игрока
+      responses:
+        '200':
+          description: Результат проверки достижения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AchievementCheckResponse'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/players/{id1}/achievements/common/{id2}:
+    parameters:
+      - name: id1
+        in: path
+        description: Идентификатор первого игрока
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          example: "1001"
+      - name: id2
+        in: path
+        description: Идентификатор второго игрока
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          example: "1002"
+    get:
+      tags: [Players]
+      operationId: getCommonAchievements
+      summary: Получить общие достижения двух игроков
+      responses:
+        '200':
+          description: Общие достижения игроков
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommonAchievementsResponse'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/leaderboard/score:
+    post:
+      tags: [Leaderboard]
+      operationId: addLeaderboardScore
+      summary: Увеличить количество очков игрока
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LeaderboardScoreRequest'
+      responses:
+        '200':
+          description: Обновлённое количество очков
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScoreResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/leaderboard/top:
+    get:
+      tags: [Leaderboard]
+      operationId: getLeaderboardTop
+      summary: Получить игроков с наибольшим количеством очков
+      parameters:
+        - name: limit
+          in: query
+          description: Максимальное количество игроков в ответе
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+            example: 10
+      responses:
+        '200':
+          description: Игроки, отсортированные по убыванию количества очков
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LeaderboardEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+  /api/leaderboard/rank/{playerId}:
+    get:
+      tags: [Leaderboard]
+      operationId: getLeaderboardRank
+      summary: Получить позицию игрока через ZRANK с нумерацией от нуля
+      parameters:
+        - name: playerId
+          in: path
+          description: Идентификатор игрока
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            example: "1001"
+      responses:
+        '200':
+          description: Позиция игрока в турнирной таблице
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardRankResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/RedisUnavailable'
+components:
+  parameters:
+    PlayerId:
+      name: id
+      in: path
+      description: Идентификатор игрока
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        example: "1001"
+  responses:
+    BadRequest:
+      description: Некорректный запрос
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RedisUnavailable:
+      description: Redis временно недоступен
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    UpsertPlayerRequest:
+      description: Данные для создания или обновления профиля игрока
+      type: object
+      required: [name, level, region]
+      properties:
+        name:
+          description: Имя игрока
+          type: string
+          minLength: 1
+          example: Alice
+        level:
+          description: Текущий уровень игрока
+          type: integer
+          format: int32
+          minimum: 0
+          example: 10
+        region:
+          description: Регион игрока
+          type: string
+          minLength: 1
+          example: EU
+    BatchPlayerRequest:
+      description: Профиль игрока для пакетного сохранения
+      type: object
+      required: [id, name, level, region]
+      properties:
+        id:
+          description: Идентификатор игрока
+          type: string
+          minLength: 1
+          example: "1001"
+        name:
+          description: Имя игрока
+          type: string
+          minLength: 1
+          example: Alice
+        level:
+          description: Текущий уровень игрока
+          type: integer
+          format: int32
+          minimum: 0
+          example: 10
+        region:
+          description: Регион игрока
+          type: string
+          minLength: 1
+          example: EU
+    BatchPlayersRequest:
+      description: Набор профилей для пакетного сохранения через Redis Pipeline
+      type: object
+      required: [players]
+      properties:
+        players:
+          description: Список из 10–100 профилей игроков
+          type: array
+          minItems: 10
+          maxItems: 100
+          example:
+            - id: "1001"
+              name: Alice
+              level: 10
+              region: EU
+            - id: "1002"
+              name: Bob
+              level: 8
+              region: EU
+            - id: "1003"
+              name: Carol
+              level: 14
+              region: NA
+            - id: "1004"
+              name: Dave
+              level: 6
+              region: ASIA
+            - id: "1005"
+              name: Eve
+              level: 12
+              region: EU
+            - id: "1006"
+              name: Frank
+              level: 4
+              region: NA
+            - id: "1007"
+              name: Grace
+              level: 9
+              region: ASIA
+            - id: "1008"
+              name: Heidi
+              level: 11
+              region: EU
+            - id: "1009"
+              name: Ivan
+              level: 7
+              region: NA
+            - id: "1010"
+              name: Judy
+              level: 13
+              region: ASIA
+          items:
+            $ref: '#/components/schemas/BatchPlayerRequest'
+    LevelUpdateRequest:
+      description: Изменение уровня игрока
+      type: object
+      required: [delta]
+      properties:
+        delta:
+          description: Значение, которое будет прибавлено к текущему уровню
+          type: integer
+          format: int32
+          example: 2
+    LeaderboardScoreRequest:
+      description: Данные для начисления очков в турнирной таблице
+      type: object
+      required: [playerId, score]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          minLength: 1
+          example: "1001"
+        score:
+          description: Количество начисляемых очков
+          type: number
+          format: double
+          exclusiveMinimum: 0
+          example: 150.5
+    AchievementRequest:
+      description: Данные для добавления достижения
+      type: object
+      required: [achievementName]
+      properties:
+        achievementName:
+          description: Название достижения
+          type: string
+          minLength: 1
+          example: FIRST_WIN
+    PlayerResponse:
+      description: Профиль игрока
+      type: object
+      required: [id, name, level, region, createdAt]
+      properties:
+        id:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        name:
+          description: Имя игрока
+          type: string
+          example: Alice
+        level:
+          description: Текущий уровень игрока
+          type: integer
+          format: int32
+          example: 12
+        region:
+          description: Регион игрока
+          type: string
+          example: EU
+        createdAt:
+          description: Дата и время создания профиля
+          type: string
+          format: date-time
+          example: "2026-10-03T12:00:00Z"
+    LoginResponse:
+      description: Результат регистрации входа игрока
+      type: object
+      required: [playerId, count, ttlSeconds]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        count:
+          description: Количество входов игрока за текущие сутки
+          type: integer
+          format: int64
+          example: 3
+        ttlSeconds:
+          description: Оставшееся время жизни счётчика в секундах
+          type: integer
+          format: int64
+          example: 86342
+    LeaderboardEntry:
+      description: Запись турнирной таблицы
+      type: object
+      required: [position, playerId, score]
+      properties:
+        position:
+          description: Место игрока в выборке с нумерацией от единицы
+          type: integer
+          format: int32
+          example: 1
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        score:
+          description: Текущее количество очков игрока
+          type: number
+          format: double
+          example: 150.5
+    LeaderboardRankResponse:
+      description: Позиция игрока в турнирной таблице
+      type: object
+      required: [playerId, rank, place, order]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        rank:
+          description: Результат ZRANK с нумерацией от нуля
+          type: integer
+          format: int64
+          example: 2
+        place:
+          description: Место игрока с нумерацией от единицы
+          type: integer
+          format: int64
+          example: 3
+        order:
+          description: Порядок сортировки, использованный для вычисления позиции
+          type: string
+          enum: [ASC]
+          example: ASC
+    ScoreResponse:
+      description: Результат начисления очков игроку
+      type: object
+      required: [playerId, score]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        score:
+          description: Итоговое количество очков игрока
+          type: number
+          format: double
+          example: 150.5
+    AchievementResponse:
+      description: Результат добавления достижения
+      type: object
+      required: [playerId, achievement, added]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        achievement:
+          description: Название достижения
+          type: string
+          example: FIRST_WIN
+        added:
+          description: Признак того, что достижение было добавлено впервые
+          type: boolean
+          example: true
+    AchievementCheckResponse:
+      description: Результат проверки достижения
+      type: object
+      required: [playerId, achievement, present]
+      properties:
+        playerId:
+          description: Идентификатор игрока
+          type: string
+          example: "1001"
+        achievement:
+          description: Название достижения
+          type: string
+          example: FIRST_WIN
+        present:
+          description: Признак наличия достижения у игрока
+          type: boolean
+          example: true
+    CommonAchievementsResponse:
+      description: Общие достижения двух игроков
+      type: object
+      required: [firstPlayerId, secondPlayerId, achievements]
+      properties:
+        firstPlayerId:
+          description: Идентификатор первого игрока
+          type: string
+          example: "1001"
+        secondPlayerId:
+          description: Идентификатор второго игрока
+          type: string
+          example: "1002"
+        achievements:
+          description: Список достижений, имеющихся у обоих игроков
+          type: array
+          uniqueItems: true
+          example: [FIRST_WIN, LEVEL_10]
+          items:
+            type: string
+    BatchResponse:
+      description: Результат пакетного сохранения профилей
+      type: object
+      required: [created, elapsedMs, pipelined]
+      properties:
+        created:
+          description: Количество сохранённых профилей
+          type: integer
+          format: int32
+          example: 10
+        elapsedMs:
+          description: Продолжительность операции в миллисекундах
+          type: integer
+          format: int64
+          example: 24
+        pipelined:
+          description: Признак использования Redis Pipeline
+          type: boolean
+          example: true
+    ErrorResponse:
+      description: Описание ошибки API
+      type: object
+      required: [status, error, message, timestamp]
+      properties:
+        status:
+          description: HTTP-статус ответа
+          type: integer
+          format: int32
+          example: 404
+        error:
+          description: Краткое название ошибки
+          type: string
+          example: Not Found
+        message:
+          description: Подробное сообщение об ошибке
+          type: string
+          example: Игрок 1001 не найден
+        timestamp:
+          description: Дата и время возникновения ошибки
+          type: string
+          format: date-time
+          example: "2026-10-03T12:00:00Z"

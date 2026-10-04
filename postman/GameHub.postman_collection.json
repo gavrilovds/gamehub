@@ -1,0 +1,327 @@
+{
+  "info": {
+    "_postman_id": "bb894df2-4b99-4ce0-b4a1-c29019ab2701",
+    "name": "GameHub API",
+    "description": "Postman collection for the GameHub API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Players",
+      "item": [
+        {
+          "name": "Create players batch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"players\": [\n    {\"id\": \"1001\", \"name\": \"Alice\", \"level\": 10, \"region\": \"EU\"},\n    {\"id\": \"1002\", \"name\": \"Bob\", \"level\": 8, \"region\": \"EU\"},\n    {\"id\": \"1003\", \"name\": \"Carol\", \"level\": 14, \"region\": \"NA\"},\n    {\"id\": \"1004\", \"name\": \"Dave\", \"level\": 6, \"region\": \"ASIA\"},\n    {\"id\": \"1005\", \"name\": \"Eve\", \"level\": 12, \"region\": \"EU\"},\n    {\"id\": \"1006\", \"name\": \"Frank\", \"level\": 4, \"region\": \"NA\"},\n    {\"id\": \"1007\", \"name\": \"Grace\", \"level\": 9, \"region\": \"ASIA\"},\n    {\"id\": \"1008\", \"name\": \"Heidi\", \"level\": 11, \"region\": \"EU\"},\n    {\"id\": \"1009\", \"name\": \"Ivan\", \"level\": 7, \"region\": \"NA\"},\n    {\"id\": \"1010\", \"name\": \"Judy\", \"level\": 13, \"region\": \"ASIA\"}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "batch"
+              ]
+            },
+            "description": "Create 10 player profiles using a Redis pipeline."
+          }
+        },
+        {
+          "name": "Create or update player",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"level\": 10,\n  \"region\": \"EU\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get player",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}"
+              ]
+            },
+            "description": "Get a player profile using cache-aside."
+          }
+        },
+        {
+          "name": "Update player level",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"delta\": 2\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/level",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}",
+                "level"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Record player login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add player achievement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"achievementName\": \"{{achievementName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/achievements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}",
+                "achievements"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check player achievement",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/achievements/{{achievementName}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}",
+                "achievements",
+                "{{achievementName}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get common achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/achievements/common/{{secondPlayerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "players",
+                "{{playerId}}",
+                "achievements",
+                "common",
+                "{{secondPlayerId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leaderboard",
+      "item": [
+        {
+          "name": "Add leaderboard score",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playerId\": \"{{playerId}}\",\n  \"score\": 150\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/leaderboard/score",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "leaderboard",
+                "score"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get leaderboard top",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leaderboard/top?limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "leaderboard",
+                "top"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get player rank",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/leaderboard/rank/{{playerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "leaderboard",
+                "rank",
+                "{{playerId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "playerId",
+      "value": "1001",
+      "type": "string"
+    },
+    {
+      "key": "secondPlayerId",
+      "value": "1002",
+      "type": "string"
+    },
+    {
+      "key": "achievementName",
+      "value": "FIRST_WIN",
+      "type": "string"
+    }
+  ]
+}

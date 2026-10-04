@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: gamehub
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+gamehub:
+  redis:
+    master: ${REDIS_SENTINEL_MASTER:mymaster}
+    sentinels: ${REDIS_SENTINELS:localhost:26379,localhost:26380,localhost:26381}
+    connect-timeout: 3s
+    command-timeout: 3s
+  notifications:
+    stream: notifications
+    group: notifications-group
+    consumer: ${HOSTNAME:gamehub-consumer}
+    retention: 7d
+  cache:
+    player-ttl: 60s
+
+logging:
+  level:
+    ru.gavrilovds.hw1: INFO
