@@ -22,7 +22,7 @@ curl http://localhost:8080/actuator/health
 данными можно скриптом:
 
 ```bash
-./scripts/seed-demo.sh
+./scripts/setup.sh
 ```
 
 Redis Insight запускается отдельно и открывается по адресу `http://localhost:5540`:
