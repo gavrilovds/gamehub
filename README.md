@@ -18,12 +18,7 @@ docker compose ps
 curl http://localhost:8080/actuator/health
 ```
 
-После запуска REST API доступен по адресу `http://localhost:8080`. Заполнить Redis демонстрационными
-данными можно скриптом:
-
-```bash
-./scripts/seed-demo.sh
-```
+После запуска REST API доступен по адресу `http://localhost:8080`.
 
 Redis Insight запускается отдельно и открывается по адресу `http://localhost:5540`:
 
