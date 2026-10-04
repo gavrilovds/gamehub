@@ -45,50 +45,45 @@ docker compose down -v
 
 ## Архитектура
 
-```plantuml
-@startuml
+```mermaid
+flowchart LR
+    Client["API client"]
 
-skinparam componentStyle rectangle
-skinparam shadowing false
-skinparam linetype ortho
-left to right direction
+    subgraph Network["GameHub network"]
+        direction LR
 
-actor "API client" as Client
+        App["app<br/>Spring Boot<br/>:8080"]
 
-frame "Gameehub network" {
-    component "app\nSpring Boot\n:8080" as App
+        subgraph SentinelQuorum["Sentinel quorum"]
+            direction TB
+            Sentinel1["sentinel-1<br/>:26379"]
+            Sentinel2["sentinel-2<br/>:26380"]
+            Sentinel3["sentinel-3<br/>:26381"]
+        end
 
-    package "Sentinel quorum" {
-        component "sentinel-1\n:26379" as Sentinel1
-        component "sentinel-2\n:26380" as Sentinel2
-        component "sentinel-3\n:26381" as Sentinel3
-    }
+        Master[("redis-master<br/>:6379")]
+        Replica1[("redis-replica-1<br/>:6380")]
+        Replica2[("redis-replica-2<br/>:6381")]
+        Insight["redis-insight<br/>:5540<br/>optional profile"]
+    end
 
-    database "redis-master\n:6379" as Master
-    database "redis-replica-1\n:6380" as Replica1
-    database "redis-replica-2\n:6381" as Replica2
-    component "redis-insight\n:5540\noptional profile" as Insight
-}
+    Client -->|"HTTP / JSON"| App
+    Client -.->|browser| Insight
 
-Client --> App : HTTP / JSON
-Client ..> Insight : browser
+    App -.->|master discovery| Sentinel1
+    App -.->|master discovery| Sentinel2
+    App -.->|master discovery| Sentinel3
+    App -->|writes| Master
+    App -->|preferred reads| Replica1
+    App -->|preferred reads| Replica2
 
-App ..> Sentinel1 : master discovery
-App ..> Sentinel2 : master discovery
-App ..> Sentinel3 : master discovery
-App --> Master : writes
-App --> Replica1 : preferred reads
-App --> Replica2 : preferred reads
+    Sentinel1 -.->|monitor / failover| Master
+    Sentinel2 -.->|monitor / failover| Master
+    Sentinel3 -.->|monitor / failover| Master
 
-Sentinel1 ..> Master : monitor / failover
-Sentinel2 ..> Master : monitor / failover
-Sentinel3 ..> Master : monitor / failover
-
-Master --> Replica1 : asynchronous replication
-Master --> Replica2 : asynchronous replication
-Insight --> Master : inspect data
-
-@enduml
+    Master -->|asynchronous replication| Replica1
+    Master -->|asynchronous replication| Replica2
+    Insight -->|inspect data| Master
 ```
 
 Приложение подключается к Redis через кластер из трёх Sentinel. Записи направляются на текущий
